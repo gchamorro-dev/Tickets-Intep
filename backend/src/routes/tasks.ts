@@ -91,7 +91,6 @@ export async function taskRoutes(app: FastifyInstance) {
   });
 
 
-
   // Técnico: actualizar estado de una tarea
   app.patch("/tasks/:id", { preHandler: [authGuard] }, async (request, reply) => {
     const user = request.user as any;
@@ -102,37 +101,59 @@ export async function taskRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: "status required" });
     }
 
-    const task = await prisma.task.findUnique({ where: { id: params.id } });
-    if (!task) return reply.status(404).send({ message: "Task not found" });
+    const result = await prisma.$transaction(async (tx) => {
+      const task = await tx.task.findUnique({ where: { id: params.id } });
+      if (!task) {
+        // Throw to exit transaction; we'll map to 404 below
+        throw Object.assign(new Error("Task not found"), { code: "TASK_NOT_FOUND" });
+      }
 
-    // Un técnico solo puede cambiar tareas asignadas a él
-    if (user.role === "TECH" && task.assignedToId !== user.sub) {
-      return reply.status(403).send({ message: "Not your task" });
-    }
+      // Un técnico solo puede cambiar tareas asignadas a él
+      if (user.role === "TECH" && task.assignedToId !== user.sub) {
+        throw Object.assign(new Error("Not your task"), { code: "NOT_YOUR_TASK" });
+      }
 
-    const updated = await prisma.task.update({
-      where: { id: params.id },
-      data: {
-        status: body.status,
-        completedAt: body.status === "DONE" ? new Date() : null,
-      },
-    });
-    // 🔥 NUEVO CÓDIGO AQUÍ
-    if (updated.status === "DONE") {
-    const pending = await prisma.task.count({
-        where: {
-        requestId: updated.requestId,
-        status: { not: "DONE" },
+      const updated = await tx.task.update({
+        where: { id: params.id },
+        data: {
+          status: body.status,
+          completedAt: body.status === "DONE" ? new Date() : null,
         },
+      });
+
+      // ✅ If task moved to DONE, check if all tasks in the request are DONE
+      if (body.status === "DONE" && task.requestId) {
+        const remaining = await tx.task.count({
+          where: {
+            requestId: task.requestId,
+            status: { not: "DONE" },
+          },
+        });
+
+        if (remaining === 0) {
+          await tx.request.update({
+            where: { id: task.requestId },
+            data: {
+              status: "DONE",
+            },
+          });
+        }
+      }
+
+      // Optional: if status is reverted from DONE, reopen the request
+      if (body.status !== "DONE" && task.requestId) {
+        await tx.request.update({
+          where: { id: task.requestId },
+          data: {
+            status: "ASSIGNED",
+            completedAt: null,
+          },
+        });
+      }
+
+      return updated;
     });
 
-    if (pending === 0) {
-        await prisma.request.update({
-        where: { id: updated.requestId },
-        data: { status: "DONE" },
-        });
-    }
-    }
-    return updated;
+    return result;
   });
-}
+};
