@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TECH
+}
+
+enum RequestStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  DONE
+  CLOSED
+  CANCELED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(TECH)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requestsCreated Request[] @relation("RequestsCreated")
+  tasksAssigned   Task[]
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  location    String?
+  area        String?
+  priority    Priority      @default(MEDIUM)
+  status      RequestStatus @default(OPEN)
+
+  createdById String
+  createdBy   User          @relation("RequestsCreated", fields: [createdById], references: [id])
+
+  tasks       Task[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+
+  requestId   String
+  request     Request    @relation(fields: [requestId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?     @relation(fields: [assignedToId], references: [id])
+
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}

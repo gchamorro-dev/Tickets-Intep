@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: intep_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: intep
+      POSTGRES_PASSWORD: intep123
+      POSTGRES_DB: intep_solicitudes
+    ports:
+      - "5432:5432"
+    volumes:
+      - intep_pgdata:/var/lib/postgresql/data
+
+volumes:
+  intep_pgdata:
