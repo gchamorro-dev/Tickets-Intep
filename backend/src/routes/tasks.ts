@@ -117,7 +117,22 @@ export async function taskRoutes(app: FastifyInstance) {
         completedAt: body.status === "DONE" ? new Date() : null,
       },
     });
+    // 🔥 NUEVO CÓDIGO AQUÍ
+    if (updated.status === "DONE") {
+    const pending = await prisma.task.count({
+        where: {
+        requestId: updated.requestId,
+        status: { not: "DONE" },
+        },
+    });
 
+    if (pending === 0) {
+        await prisma.request.update({
+        where: { id: updated.requestId },
+        data: { status: "DONE" },
+        });
+    }
+    }
     return updated;
   });
 }
