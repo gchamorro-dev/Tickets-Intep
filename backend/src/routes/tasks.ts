@@ -90,6 +90,53 @@ export async function taskRoutes(app: FastifyInstance) {
     });
   });
 
+app.get("/tasks/my-done", { preHandler: [authGuard] }, async (request) => {
+  const user = request.user as any;
+  if (user.role !== "TECH") return [];
+
+  return prisma.task.findMany({
+    where: {
+      assignedToId: user.sub,
+      status: "DONE",
+    },
+    include: {  
+      request: {
+        select: { id: true, title: true, location: true, priority: true, status: true },
+      },
+    },
+    orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
+    take: 30, // últimas 30 completadas
+  });
+});
+
+
+
+  // Técnico: ver mis tareas pendientes (sin filtro de "hoy")
+app.get("/tasks/my-pending", { preHandler: [authGuard] }, async (request) => {
+  const user = request.user as any;
+  if (user.role !== "TECH") return [];
+
+  return prisma.task.findMany({
+    where: {
+      assignedToId: user.sub,
+      status: { in: ["TODO", "IN_PROGRESS"] },
+    },
+    include: {
+      request: {
+        select: {
+          id: true,
+          title: true,
+          location: true,
+          priority: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+  });
+});
+
+
 
   // Técnico: actualizar estado de una tarea
   app.patch("/tasks/:id", { preHandler: [authGuard] }, async (request, reply) => {

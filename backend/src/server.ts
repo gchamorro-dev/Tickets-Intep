@@ -1,40 +1,46 @@
-import Fastify from "fastify";
+import fastify from "fastify";
 import cors from "@fastify/cors";
+import "dotenv/config";
 import jwt from "@fastify/jwt";
 
-import { prisma } from "./db";
+
 import { authRoutes } from "./routes/auth";
+// import { authPlugin } from "./plugins/auth"; // si lo tienes
 import { requestRoutes } from "./routes/requests";
-import { userRoutes } from "./routes/users";
 import { taskRoutes } from "./routes/tasks";
+import { userRoutes } from "./routes/users"; // si existe
+
+const app = fastify({ logger: true });
+
+async function main() {
+  // ✅ CORS primero
+  await app.register(cors, {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
+
+  await app.register(jwt, {
+    secret: process.env.JWT_SECRET || "dev-secret",
+  });
+
+  // plugins
+  // await app.register(authPlugin); // si aplica
 
 
+  // routes
+  await app.register(requestRoutes);
+  await app.register(taskRoutes);
+  await app.register(authRoutes);
+  await app.register(userRoutes); // si aplica
 
+  const port = Number(process.env.PORT ?? 3000);
+  await app.listen({ port, host: "0.0.0.0" });
 
+  console.log(`API running on http://localhost:${port}`);
+}
 
-const app = Fastify({ logger: true });
-
-app.register(cors, {
-  origin: true, // luego lo cerramos a tu dominio
-});
-
-app.register(jwt, {
-  secret: process.env.JWT_SECRET || "dev-secret",
-});
-
-// Health
-app.get("/health", async () => {
-  const dbOk = await prisma.user.count(); // prueba real de BD
-  return { ok: true, dbOk };
-});
-
-app.register(authRoutes);
-app.register(requestRoutes);
-app.register(userRoutes);
-app.register(taskRoutes);
-
-// Arranque
-app.listen({ port: 3000, host: "0.0.0.0" }).catch((err) => {
+main().catch((err) => {
   app.log.error(err);
   process.exit(1);
 });

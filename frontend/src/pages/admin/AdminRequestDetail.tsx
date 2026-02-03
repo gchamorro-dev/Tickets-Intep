@@ -81,7 +81,7 @@ export default function AdminRequestDetail() {
           title: taskTitle,
           description: taskDesc || null,
           assignedToId: assignedToId || null,
-          dueDate: dueDate ? `${dueDate}T00:00:00.000Z` : null,
+          dueDate: dueDate ? `${dueDate}T00:00:00.000` : null,
         }),
       });
 

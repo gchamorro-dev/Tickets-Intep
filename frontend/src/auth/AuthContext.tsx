@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect } from "react";
 import { api } from "../api/client";
+import { jwtDecode } from "jwt-decode";
+
 
 type Role = "ADMIN" | "TECH";
 
@@ -17,6 +19,8 @@ type AuthContextType = {
   logout: () => void;
 };
 
+
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -27,6 +31,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const raw = localStorage.getItem("user");
     return raw ? (JSON.parse(raw) as User) : null;
   });
+
+  useEffect(() => {
+    if (!token) return;
+
+    try {
+      const decoded = jwtDecode(token);
+      console.log("JWT DECODED:", decoded);
+    } catch (e) {
+      console.log("JWT decode failed:", e);
+    }
+  }, [token]);
+
 
   const logout = () => {
     localStorage.removeItem("token");
