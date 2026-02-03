@@ -45,4 +45,26 @@ export async function requestRoutes(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
     });
   });
+
+
+// Obtener una solicitud por id (con sus tareas)
+  app.get(
+    "/requests/:id",
+    { preHandler: [authGuard] },
+    async (request, reply) => {
+      const params = request.params as { id: string };
+
+      const req = await prisma.request.findUnique({
+        where: { id: params.id },
+        include: { tasks: true },
+      });
+
+      if (!req) {
+        return reply.status(404).send({ message: "Request not found" });
+      }
+
+      return req;
+    }
+  );
+
 }

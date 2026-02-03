@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 
+function statusColor(status: string) {
+  if (status === "DONE") return "text-green-600";
+  if (status === "IN_PROGRESS") return "text-blue-600";
+  return "text-slate-500";
+}
+
+
 type TaskItem = {
   id: string;
   title: string;
@@ -31,13 +38,14 @@ export default function TechToday() {
     }
   }
 
-  async function setDone(id: string) {
+  async function setStatus(id: string, status: "IN_PROGRESS" | "DONE") {
     await api(`/tasks/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "DONE" }),
+      body: JSON.stringify({ status }),
     });
     load();
   }
+
 
   useEffect(() => {
     load();
@@ -46,23 +54,31 @@ export default function TechToday() {
   return (
     <div className="min-h-screen bg-slate-50 p-4">
       <div className="max-w-xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Mi día</h1>
-            <p className="text-slate-600 text-sm">{user?.email}</p>
-          </div>
+        <div className="flex items-center justify-between mt-3">
+          <span className={`text-xs font-semibold ${statusColor(t.status)}`}>
+            {t.status}
+          </span>
           <div className="flex gap-2">
-            <button className="rounded-lg border px-3 py-2" onClick={load}>
-              Recargar
-            </button>
-            <button
-              className="rounded-lg bg-black text-white px-3 py-2"
-              onClick={logout}
-            >
-              Salir
-            </button>
+            {t.status === "TODO" && (
+              <button
+                className="rounded-lg border px-3 py-1 text-sm"
+                onClick={() => setStatus(t.id, "IN_PROGRESS")}
+              >
+                Iniciar
+              </button>
+            )}
+
+            {t.status === "IN_PROGRESS" && (
+              <button
+                className="rounded-lg bg-black text-white px-3 py-1 text-sm"
+                onClick={() => setStatus(t.id, "DONE")}
+              >
+                Finalizar
+              </button>
+            )}
           </div>
         </div>
+
 
         {error && (
           <div className="mt-4 rounded-lg bg-red-50 text-red-700 p-2 text-sm">

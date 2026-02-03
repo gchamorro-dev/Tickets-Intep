@@ -4,6 +4,8 @@ import AdminHome from "./pages/admin/AdminHome";
 import TechToday from "./pages/tech/TechToday";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { AuthProvider } from "./auth/AuthContext";
+import AdminRequestDetail from "./pages/admin/AdminRequestDetail";
+
 
 export default function App() {
   return (
@@ -20,7 +22,15 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/admin/requests/:id"
+            element={
+              <ProtectedRoute role="ADMIN">
+                <AdminRequestDetail />
+              </ProtectedRoute>
+            }
+          />
+          
           <Route
             path="/tech"
             element={
